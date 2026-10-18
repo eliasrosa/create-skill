@@ -38,19 +38,23 @@ Seções opcionais: Padrão Central, Implementação, Impacto Real.
 - `inclusion: auto` (ativação automática por trigger) — **não usar `version`** (campo removido)
 - Total frontmatter: máx 1024 chars
 
-## Convenção de Repositório GitHub
+## Convenção de Repositório (opcional, mas recomendado)
 
-Toda skill com scripts deve ter um repo GitHub próprio:
+Skills com scripts ficam melhor em um repositório versionado. Não há plataforma obrigatória — GitHub, GitLab, Gitea ou qualquer outro serve. O importante é que seja instalável via `git clone`.
 
-| Campo | Padrão |
-|-------|--------|
-| Nome do repo | `eliasrosa/<nome>-skill` (sufixo `-skill` obrigatório) |
+**Padrão sugerido:**
+
+| Campo | Sugestão |
+|-------|----------|
+| Nome do repo | `<usuario>/<nome>-skill` (sufixo `-skill` facilita identificação) |
 | Branch padrão | `main` |
-| Instalação local | `git clone <repo> ~/.kiro/skills/<nome>` |
-| Dados do usuário | pasta `.data/` na raiz (gitignored) |
+| Instalação local | `git clone <url-do-repo> ~/.kiro/skills/<nome>` |
+| Dados do usuário | pasta `.data/` na raiz (gitignored — nunca commitada) |
 | Scripts | pasta `tools/` na raiz |
 
-Exemplo: `eliasrosa/browser-teams-skill` → instalado em `~/.kiro/skills/teams-inbox/`
+Exemplo genérico: `github.com/<usuario>/minha-skill` → instalado em `~/.kiro/skills/minha-skill/`
+
+> O sufixo `-skill` é convenção, não obrigação. O que importa é que a pasta local tenha um `SKILL.md` válido.
 
 ## Estrutura de Pastas do Repo
 
@@ -85,10 +89,10 @@ Toda skill que tem `tools/` deve ter um script `tools/check.py` que valida os re
 | Categoria | O que checar |
 |-----------|-------------|
 | Ferramentas externas | `playwright-cli`, `ffmpeg`, `git`, etc. |
-| Variáveis de ambiente | `PLAYWRIGHT_CLI_SESSION`, tokens, paths |
+| Variáveis de ambiente | tokens, paths, chaves de API |
 | Arquivos de config | `.data/config.json` existe e tem campos obrigatórios |
-| Banco/estado | `.data/contacts.db` populado, `session_name` válido |
-| Conectividade | Chrome com remote debugging, aba do Teams aberta, etc. |
+| Banco/estado | banco SQLite populado, sessão válida |
+| Conectividade | serviço externo acessível, credenciais válidas |
 
 **Template mínimo de `tools/check.py`:**
 
@@ -114,10 +118,10 @@ def check(label: str, result: bool, fix: str = ""):
 
 print("Verificando requisitos...\n")
 
-# Ferramentas
-check("playwright-cli instalado",
-      shutil.which("playwright-cli") is not None,
-      "npm install -g @playwright/cli@latest")
+# Ferramentas — adapte à sua skill
+check("<ferramenta> instalada",
+      shutil.which("<ferramenta>") is not None,
+      "<comando de instalação>")
 
 # Config
 cfg = DATA / "config.json"
@@ -125,19 +129,8 @@ check(".data/config.json existe",
       cfg.exists(),
       "python3 tools/config.py  # cria com defaults")
 
-# Estado
-check(".data/contacts.db populado",
-      (DATA / "contacts.db").exists(),
-      "python3 tools/map_contacts.py  # onboarding inicial")
-
-# Conectividade
-try:
-    r = subprocess.run(["playwright-cli", "tab-list"], capture_output=True, text=True, timeout=5)
-    check("Chrome conectado via CDP",
-          r.returncode == 0 and r.stdout.strip(),
-          "python3 tools/attach.py")
-except Exception:
-    check("Chrome conectado via CDP", False, "python3 tools/attach.py")
+# Estado/conectividade — adapte à sua skill
+# check("<serviço> acessível", <verificação>, "<como corrigir>")
 
 print()
 if ok:
@@ -169,8 +162,8 @@ Dados que não devem ser perdidos em `git pull` ficam em `.data/` (gitignored):
 ```
 .data/
 ├── config.json      # preferências via tools/config.py
-├── contacts.db      # exemplo: SQLite com mapa de contatos
-└── session_name     # exemplo: sessão playwright persistida
+├── dados.db         # exemplo: SQLite com dados locais da skill
+└── estado.txt       # exemplo: estado persistido entre execuções
 ```
 
 **Regra:** qualquer informação específica do usuário (IDs, nomes, tokens, preferências) vai em `.data/`, nunca commitada. Se apagada, deve ser regenerável pelos scripts de setup/onboarding.
@@ -184,13 +177,13 @@ Toda skill com configurações do usuário deve ter `tools/config.py`:
 # Uso: python3 config.py [set <chave> <valor>]
 ```
 
-Chaves comuns:
+Chaves comuns (exemplos — adapte ao domínio da sua skill):
 
 | Chave | Exemplo | Descrição |
 |-------|---------|-----------|
-| `notes_dir` | `~/vault/Teams` | Onde gravar notas/saídas |
+| `output_dir` | `~/Documents/saida` | Onde gravar arquivos gerados |
 | `message_prefix` | `🤖 ` | Prefixo de mensagens enviadas pelo agente |
-| `send_key` | `Ctrl+Enter` | Atalho configurável |
+| `send_key` | `Ctrl+Enter` | Atalho configurável de envio |
 
 ## Quando Criar vs Não Criar
 
@@ -255,9 +248,9 @@ Saída esperada quando OK:
 \```
 Verificando requisitos...
 
-  ✓ playwright-cli instalado
+  ✓ <ferramenta> instalada
   ✓ .data/config.json existe
-  ✓ Chrome conectado via CDP
+  ✓ <serviço> acessível
 
 ✓ Todos os requisitos satisfeitos.
 \```
@@ -276,12 +269,13 @@ Verificando requisitos...
 - ❌ `version` no frontmatter — campo removido, usar só `name`/`description`/`inclusion`
 - ❌ IDs, nomes de usuário ou tokens hardcoded nos scripts — ficam em `.data/config.json` ou steerings
 - ❌ Skill com `tools/` sem `check.py` — o usuário não sabe o que está faltando para rodar
+- ❌ **Dados pessoais no conteúdo da skill** — usernames, paths pessoais (`~/vault/`, `~/dev/cogna/`), nomes de repos próprios, IDs de ambiente, configurações específicas de quem criou. A skill é um template genérico; dados pessoais ficam no steering privado do usuário, não na skill compartilhável.
 
 ## Checklist Rápido
 
 - [ ] Frontmatter com `name`, `description` e `inclusion: auto` (sem `version`)
 - [ ] Description = condições de ativação (não workflow)
-- [ ] Repo GitHub `eliasrosa/<nome>-skill` criado
+- [ ] **Sem dados pessoais** — sem username, paths pessoais, nomes de repos próprios, IDs de ambiente; usar placeholders (`<usuario>`, `<caminho>`, `<ferramenta>`)
 - [ ] `.gitignore` inclui `.data/`
 - [ ] Scripts em Python 3.10+ em `tools/`
 - [ ] **`tools/check.py` criado** com exit 0/1 e mensagem de correção por falha
