@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+# ---------------------------------------------------------------------------
+# Re-exec opcional — inclua se o script usa pacotes do venv do Kiro Crew
+# (torch, edge-tts, playwright, etc.). Remova se usar só stdlib.
+# Deve ficar ANTES de qualquer import de pacote do venv.
+# ---------------------------------------------------------------------------
+# import os as _os, sys as _sys
+# _VENV_PY = _os.path.expanduser("~/.kiro/crew-venv-current/bin/python3")
+# if _os.path.isfile(_VENV_PY) and not _sys.executable.startswith(
+#     _os.path.expanduser("~/.kiro/crew")
+# ):
+#     _os.execv(_VENV_PY, [_VENV_PY] + _sys.argv)
+# ---------------------------------------------------------------------------
 """
 Pré-check da <nome-da-skill>.
 
