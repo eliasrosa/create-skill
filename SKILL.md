@@ -111,6 +111,43 @@ Scripts de ferramentas em **Python 3.10+**, sem dependências externas além das
 - Cada script deve ser executável standalone: `python3 tools/<script>.py`
 - Argumentos via `sys.argv`, sem bibliotecas de CLI (`argparse` é stdlib, OK)
 
+### Re-exec automático para o venv do Kiro Crew
+
+Se a skill usa pacotes instalados no venv do Kiro Crew (`torch`, `edge-tts`, `playwright`, etc.), o script precisa rodar com o Python desse venv — e não com o Python do sistema.
+
+**Solução: re-exec no topo do script**, antes de qualquer import pesado. Ele detecta se está no venv errado e se substitui pelo Python correto via `os.execv` (troca o processo no lugar, sem fork):
+
+```python
+#!/usr/bin/env python3
+# Re-exec para o venv do Kiro Crew — ANTES de qualquer import de pacote do venv
+import os as _os, sys as _sys
+_VENV_PY = _os.path.expanduser("~/.kiro/crew-venv-current/bin/python3")
+if _os.path.isfile(_VENV_PY) and not _sys.executable.startswith(
+    _os.path.expanduser("~/.kiro/crew")
+):
+    _os.execv(_VENV_PY, [_VENV_PY] + _sys.argv)
+
+# A partir daqui, garante-se estar no venv correto
+# Docstring e imports normais vêm aqui
+```
+
+**Por que isso elimina o wrapper `.sh`:**
+- O `.sh` existia só para garantir o Python certo: `exec ~/.kiro/crew-venv-current/bin/python3 "$@"`
+- Com o re-exec no `.py`, o agente chama diretamente `python3 tools/script.py` — o script cuida sozinho do venv
+- Um arquivo a menos, sem perda de funcionalidade
+
+**Cuidado com `from __future__ import annotations`:**
+- Essa instrução precisa ser a **primeira linha executável** do módulo em Python — antes de qualquer código
+- O re-exec usa `import os, sys` antes dela, o que é permitido (são imports de stdlib, não `__future__`)
+- O docstring do módulo pode vir DEPOIS do re-exec — Python ignora docstrings após código de nível de módulo? Não — só o primeiro string literal vira `__doc__`. Colocar o docstring depois do re-exec é seguro (ele ainda é reconhecido como `__doc__` se for o primeiro literal)
+- **Nunca** coloque `from __future__ import annotations` depois do bloco de re-exec — mova-o para antes, ou remova-o se não for necessário
+
+**Quando usar re-exec:**
+- ✅ Script usa pacotes do venv do Kiro Crew (`torch`, `edge-tts`, etc.)
+- ✅ Script pode ser chamado com `python3` genérico (sem garantia do venv)
+- ❌ Script usa só stdlib — re-exec desnecessário
+- ❌ Script já é chamado diretamente pelo venv (`~/.kiro/crew-venv-current/bin/python3 script.py`)
+
 ## Pasta `.data/` — dados persistentes do usuário
 
 Dados que não devem ser perdidos em `git pull` ficam em `.data/` (gitignored):
@@ -223,6 +260,7 @@ Verificando requisitos...
 - ❌ Labels genéricos (helper1, step3)
 - ❌ Skill sem teste baseline
 - ❌ Scripts bash com JS heredoc inline — usar Python puro
+- ❌ Wrapper `.sh` só para selecionar o Python certo — usar re-exec no topo do `.py`
 - ❌ `version` no frontmatter — campo removido, usar só `name`/`description`/`inclusion`
 - ❌ IDs, nomes de usuário ou tokens hardcoded nos scripts — ficam em `.data/config.json` ou steerings
 - ❌ Skill com `tools/` sem `check.py` — o usuário não sabe o que está faltando para rodar
@@ -235,6 +273,7 @@ Verificando requisitos...
 - [ ] **Sem dados pessoais** — sem username, paths pessoais, nomes de repos próprios, IDs de ambiente; usar placeholders (`<usuario>`, `<caminho>`, `<ferramenta>`)
 - [ ] `.gitignore` inclui `.data/`
 - [ ] Scripts em Python 3.10+ em `tools/`
+- [ ] Se o script usa pacotes do venv do Kiro Crew: re-exec no topo (ver seção "Re-exec automático")
 - [ ] **`tools/check.py` criado** com exit 0/1 e mensagem de correção por falha
 - [ ] Dados do usuário em `.data/` (nunca commitados)
 - [ ] `tools/config.py` se houver preferências configuráveis
