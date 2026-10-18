@@ -281,14 +281,46 @@ Verificando requisitos...
 - ❌ Wrapper `.sh` só para selecionar o Python certo — usar re-exec no topo do `.py`
 - ❌ `version` no frontmatter — campo removido, usar só `name`/`description`/`inclusion`
 - ❌ IDs, nomes de usuário ou tokens hardcoded nos scripts — ficam em `.data/config.json` ou steerings
+- ❌ Caminhos hardcoded com `/home/<usuario>/` ou `expanduser("~/.kiro/crew/...")` — usar `KIROCREW_HOME` + fallback (ver "Auditoria de Hardcode")
 - ❌ Skill com `tools/` sem `check.py` — o usuário não sabe o que está faltando para rodar
 - ❌ **Dados pessoais no conteúdo da skill** — usernames, paths pessoais (`~/vault/`, `~/dev/cogna/`), nomes de repos próprios, IDs de ambiente, configurações específicas de quem criou. A skill é um template genérico; dados pessoais ficam no steering privado do usuário, não na skill compartilhável.
+
+## Auditoria de Hardcode
+
+Antes de publicar (ou ao revalidar uma skill existente), rodar este grep para encontrar caminhos hardcoded:
+
+```bash
+SKILL_DIR=~/.kiro/skills/<nome-da-skill>
+
+# Caminhos pessoais hardcoded (não devem aparecer em scripts públicos)
+grep -rn "/home/\|expanduser.*kiro/crew/\|Path\.home().*kiro/crew/" \
+  "$SKILL_DIR/tools/" "$SKILL_DIR/docs/" 2>/dev/null
+
+# Nomes de usuário em strings (troca por placeholder <usuario>)
+grep -rn "eliasrosa\|elias\b" "$SKILL_DIR/" --include="*.py" --include="*.md" 2>/dev/null
+
+# KIROCREW_HOME não respeitado (kiro/crew/config hardcoded)
+grep -rn "kiro/crew/config\.json" "$SKILL_DIR/tools/" 2>/dev/null
+```
+
+Resultado limpo = nenhuma linha. Cada achado é um item a corrigir antes de commitar.
+
+**Padrões que devem aparecer em vez dos hardcodes:**
+
+| Hardcode ❌ | Correto ✅ |
+|-------------|-----------|
+| `os.path.expanduser("~/.kiro/crew/config.json")` | `os.path.join(CREW_HOME, "config.json")` |
+| `Path.home() / ".kiro/crew/models/..."` | `os.path.join(CREW_HOME, "models/...")` |
+| `"/home/elias/..."` | `str(Path.home() / "...")` |
+| `"eliasrosa/minha-skill"` | `"<usuario>/minha-skill"` |
+| `~/.kiro/crew-venv-current/bin/python3` em strings hardcoded | `$VENV_PY` ou via re-exec |
 
 ## Checklist Rápido
 
 - [ ] Frontmatter com `name`, `description` e `inclusion: auto` (sem `version`)
 - [ ] Description = condições de ativação (não workflow)
 - [ ] **Sem dados pessoais** — sem username, paths pessoais, nomes de repos próprios, IDs de ambiente; usar placeholders (`<usuario>`, `<caminho>`, `<ferramenta>`)
+- [ ] **Sem hardcode de caminhos** — rodar a auditoria de hardcode acima antes de commitar
 - [ ] `.gitignore` inclui `.data/`
 - [ ] Scripts em Python 3.10+ em `tools/`
 - [ ] Se o script usa pacotes do venv do Kiro Crew: re-exec no topo (ver seção "Re-exec automático")
