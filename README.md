@@ -1,16 +1,16 @@
 # create-skill
 
-Skill do [Kiro Crew](https://kiro.dev) para criar, estruturar e validar novas skills — incluindo padrões de repo GitHub, scripts Python, pasta `.data/` gitignored e pré-check de requisitos.
+Skill do [Kiro Crew](https://kiro.dev) para criar, estruturar e validar novas skills — incluindo estrutura de pastas, scripts Python, pasta `.data/` gitignored e pré-check de requisitos.
 
 Ativada automaticamente com `$create-skill` ou ao mencionar criação de skills.
 
 ## O que faz
 
 - Define a estrutura obrigatória de toda skill (`SKILL.md`, `tools/`, `.data/`, `check.py`)
-- Padrão de repo GitHub: `eliasrosa/<nome>-skill` com sufixo `-skill`
+- Sugere convenção de repositório versionado (Git, qualquer plataforma)
 - Convenções de script: Python 3.10+, sem dependências externas
 - Template de `check.py` para validação de requisitos (exit 0/1)
-- Ciclo RED-GREEN-REFACTOR para validar skills de disciplina
+- Ciclo RED-GREEN-REFACTOR para testar e validar skills de disciplina
 
 ## Uso
 
