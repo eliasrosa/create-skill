@@ -111,6 +111,24 @@ Scripts de ferramentas em **Python 3.10+**, sem dependências externas além das
 - Cada script deve ser executável standalone: `python3 tools/<script>.py`
 - Argumentos via `sys.argv`, sem bibliotecas de CLI (`argparse` é stdlib, OK)
 
+### Localizar o diretório do Kiro Crew — `KIROCREW_HOME`
+
+Quando um script precisa acessar `config.json` ou modelos do Kiro Crew, **nunca hardcode `~/.kiro/crew`**. Use a env `KIROCREW_HOME` com fallback:
+
+```python
+import os
+from pathlib import Path
+
+CREW_HOME   = os.environ.get("KIROCREW_HOME") or str(Path.home() / ".kiro/crew")
+CREW_CONFIG = os.path.join(CREW_HOME, "config.json")
+# Exemplo de modelo:
+# PIPER_MODEL = os.path.join(CREW_HOME, "models/piper/pt_BR-faber-medium.onnx")
+```
+
+**Por quê:** `KIROCREW_HOME` é a variável oficial do Kiro Crew (confirmada em `kiro_crew/config/paths.py`). Quando o usuário instala o Crew em local não-padrão, ela é definida e aponta para o diretório correto. O fallback `~/.kiro/crew` reproduz exatamente o comportamento atual quando a env não está setada.
+
+**O `check-template.py` já inclui esse padrão** como bloco comentado — descomentar quando o script acessa arquivos do Kiro Crew.
+
 ### Re-exec automático para o venv do Kiro Crew
 
 Se a skill usa pacotes instalados no venv do Kiro Crew (`torch`, `edge-tts`, `playwright`, etc.), o script precisa rodar com o Python desse venv — e não com o Python do sistema.
@@ -274,6 +292,7 @@ Verificando requisitos...
 - [ ] `.gitignore` inclui `.data/`
 - [ ] Scripts em Python 3.10+ em `tools/`
 - [ ] Se o script usa pacotes do venv do Kiro Crew: re-exec no topo (ver seção "Re-exec automático")
+- [ ] Se o script acessa config/modelos do Kiro Crew: usar `KIROCREW_HOME` com fallback (ver seção "Localizar o diretório do Kiro Crew")
 - [ ] **`tools/check.py` criado** com exit 0/1 e mensagem de correção por falha
 - [ ] Dados do usuário em `.data/` (nunca commitados)
 - [ ] `tools/config.py` se houver preferências configuráveis

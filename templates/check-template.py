@@ -35,9 +35,17 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+import os
 
 # .data fica na raiz da skill (um nível acima de tools/)
 DATA = Path(__file__).parent.parent / ".data"
+
+# Diretório base do Kiro Crew — respeita KIROCREW_HOME quando definida,
+# cai para ~/.kiro/crew como padrão. Use para localizar config.json ou modelos.
+# Remova se sua skill não acessa arquivos do Kiro Crew.
+CREW_HOME = os.environ.get("KIROCREW_HOME") or str(Path.home() / ".kiro/crew")
+# Exemplo de uso:
+#   crew_cfg = json.loads(open(os.path.join(CREW_HOME, "config.json")).read())
 
 # Controla o exit code final
 ok = True
