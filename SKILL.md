@@ -94,51 +94,7 @@ Toda skill que tem `tools/` deve ter um script `tools/check.py` que valida os re
 | Banco/estado | banco SQLite populado, sessão válida |
 | Conectividade | serviço externo acessível, credenciais válidas |
 
-**Template mínimo de `tools/check.py`:**
-
-```python
-#!/usr/bin/env python3
-"""
-Pré-check: valida que todos os requisitos da skill estão satisfeitos.
-Uso: python3 tools/check.py
-Saída: lista de ✓/✗ por requisito; exit 1 se algum falhar.
-"""
-import shutil, subprocess, sys
-from pathlib import Path
-
-DATA = Path(__file__).parent.parent / ".data"
-ok = True
-
-def check(label: str, result: bool, fix: str = ""):
-    global ok
-    status = "✓" if result else "✗"
-    print(f"  {status} {label}" + (f"\n    → {fix}" if not result and fix else ""))
-    if not result:
-        ok = False
-
-print("Verificando requisitos...\n")
-
-# Ferramentas — adapte à sua skill
-check("<ferramenta> instalada",
-      shutil.which("<ferramenta>") is not None,
-      "<comando de instalação>")
-
-# Config
-cfg = DATA / "config.json"
-check(".data/config.json existe",
-      cfg.exists(),
-      "python3 tools/config.py  # cria com defaults")
-
-# Estado/conectividade — adapte à sua skill
-# check("<serviço> acessível", <verificação>, "<como corrigir>")
-
-print()
-if ok:
-    print("✓ Todos os requisitos satisfeitos.")
-else:
-    print("✗ Corrija os itens acima antes de usar a skill.")
-    sys.exit(1)
-```
+**Template:** copie `templates/check-template.py` para `tools/check.py` e adapte. O template tem 4 blocos comentados (ferramentas, dependências, estado local, conectividade) — remova os que não se aplicam e preencha os que ficam.
 
 **Regras:**
 - Exit 0 = tudo OK, exit 1 = algum requisito falhou
@@ -170,11 +126,12 @@ Dados que não devem ser perdidos em `git pull` ficam em `.data/` (gitignored):
 
 ## `config.json` padrão
 
-Toda skill com configurações do usuário deve ter `tools/config.py`:
+**Template:** copie `templates/config-template.py` para `tools/config.py`, edite o dict `DEFAULTS` com as chaves da sua skill e atualize o dict `HELP` com a descrição de cada uma.
 
-```python
-# Lê/grava .data/config.json
-# Uso: python3 config.py [set <chave> <valor>]
+```bash
+python3 tools/config.py                      # ver configuração atual
+python3 tools/config.py set <chave> <valor>  # alterar um valor
+python3 tools/config.py reset                # restaurar defaults
 ```
 
 Chaves comuns (exemplos — adapte ao domínio da sua skill):

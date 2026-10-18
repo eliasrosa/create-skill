@@ -28,6 +28,23 @@ Ou diga "crie uma skill para X" — a skill é carregada automaticamente.
 | `persuasion-principles.md` | Como escrever instruções que o agente segue sob pressão |
 | `testing-skills-with-subagents.md` | Ciclo RED-GREEN-REFACTOR para testar skills de disciplina |
 
+## Templates
+
+Copie e adapte para criar sua skill:
+
+| Template | Destino | O que é |
+|----------|---------|---------|
+| `templates/SKILL-template.md` | `SKILL.md` | Estrutura completa com seções comentadas |
+| `templates/check-template.py` | `tools/check.py` | Pré-check com 4 blocos configuráveis |
+| `templates/config-template.py` | `tools/config.py` | Gerenciador de `.data/config.json` |
+
+```bash
+# Começar uma skill nova a partir dos templates:
+cp templates/SKILL-template.md ~/minha-skill/SKILL.md
+cp templates/check-template.py ~/minha-skill/tools/check.py
+cp templates/config-template.py ~/minha-skill/tools/config.py
+```
+
 ## Licença
 
 MIT
