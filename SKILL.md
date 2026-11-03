@@ -102,6 +102,42 @@ Toda skill que tem `tools/` deve ter um script `tools/check.py` que valida os re
 - Não instala nem corrige automaticamente — só informa
 - O agente roda `check.py` antes de qualquer outra ferramenta da skill
 
+## Instalação: `tools/install.py` (skills com pacotes no venv)
+
+Skill que depende de pacotes no venv do Kiro Crew precisa de um `tools/install.py`: o
+update do Crew cria um venv novo e esses pacotes somem. O `install.py` restaura o que
+falta e é a **fonte única** das dependências da skill. O `check.py` importa as listas
+dele em vez de repetir os nomes, e o README e o SKILL.md apontam para ele em vez de
+copiar comandos `pip install`.
+
+**Regras:**
+- Idempotente: instala só o que falta e pode rodar a cada update
+- `--dry-run` obrigatório: mostra o que faria, sem alterar nada
+- Instala com o Python do venv: `<KIROCREW_HOME>-venv-current/bin/python3 -m pip install …`
+  (o Crew deriva o venv do data home; nunca o `pip` do sistema, bloqueado pelo PEP 668)
+- Só stdlib no próprio `install.py`: ele roda com `python3` genérico, antes dos pacotes existirem
+- Dependência pesada ou que mexe em pacotes do próprio Crew (ex.: `torch`) é **opt-in**:
+  uma flag (`--<extra>`) que grava a escolha no `.data/config.json`, para os próximos
+  updates reinstalarem sem perguntar
+- Exit 0 = ok, exit 1 = alguma etapa falhou
+- Ajuste no `config.json` do Kiro Crew só via `kirocrew config set`, e só o que a skill
+  precisa para funcionar (ex.: desligar um comportamento nativo que conflita com ela)
+
+Modelo pronto: `tools/install.py` da skill
+[voxlocal](https://github.com/eliasrosa/voxlocal-skill).
+
+### Vínculo com a skill crew-setup
+
+A skill [crew-setup](https://github.com/eliasrosa/kirocrew-setup-skill) restaura o
+ambiente depois de um update do Kiro Crew. Para ela também restaurar a sua skill:
+
+1. A skill tem `tools/check.py` e, se precisar de pacotes no venv, `tools/install.py`
+2. Adicionar uma linha no `tools/linked-skills.txt` do crew-setup: `<pasta> <url-do-repo>`
+3. O usuário escolhe no perfil (`crew-setup.sh --reconfigure`) se quer a skill. O setup
+   clona, roda o `install.py` e o check; o `crew-check.sh` roda o `check.py`
+
+A lista é fechada de propósito: o setup só executa código das skills listadas.
+
 ## Scripts: sempre Python
 
 Scripts de ferramentas em **Python 3.10+**, sem dependências externas além das stdlib e do `playwright-cli` quando necessário.
@@ -268,7 +304,7 @@ Verificando requisitos...
 \```
 ```
 
-**Regra:** sempre que alterar o repo (novo script, novo campo de config, novo requisito), verificar se o README e o `check.py` precisam de atualização. Na dúvida, atualizar.
+**Regra:** sempre que alterar o repo (novo script, novo campo de config, novo requisito), verificar se o README, o `check.py` e o `install.py` precisam de atualização. Na dúvida, atualizar.
 
 ## Anti-Padrões
 
@@ -283,6 +319,9 @@ Verificando requisitos...
 - ❌ IDs, nomes de usuário ou tokens hardcoded nos scripts — ficam em `.data/config.json` ou steerings
 - ❌ Caminhos hardcoded com `/home/<usuario>/` ou `expanduser("~/.kiro/crew/...")` — usar `KIROCREW_HOME` + fallback (ver "Auditoria de Hardcode")
 - ❌ Skill com `tools/` sem `check.py` — o usuário não sabe o que está faltando para rodar
+- ❌ Comandos `pip install` copiados em README, SKILL.md e docs — a lista diverge; centralizar no `tools/install.py` e apontar para ele
+- ❌ Skill instalada como cópia (`cp -r`) em vez de `git clone` — não atualiza com `git pull`
+- ❌ Instalar no `pip` do sistema ou com `--user` — o pacote some do venv do Kiro Crew; usar o Python do venv
 - ❌ **Dados pessoais no conteúdo da skill** — usernames, paths pessoais (`~/vault/`, `~/dev/cogna/`), nomes de repos próprios, IDs de ambiente, configurações específicas de quem criou. A skill é um template genérico; dados pessoais ficam no steering privado do usuário, não na skill compartilhável.
 
 ## Auditoria de Hardcode
@@ -326,6 +365,8 @@ Resultado limpo = nenhuma linha. Cada achado é um item a corrigir antes de comm
 - [ ] Se o script usa pacotes do venv do Kiro Crew: re-exec no topo (ver seção "Re-exec automático")
 - [ ] Se o script acessa config/modelos do Kiro Crew: usar `KIROCREW_HOME` com fallback (ver seção "Localizar o diretório do Kiro Crew")
 - [ ] **`tools/check.py` criado** com exit 0/1 e mensagem de correção por falha
+- [ ] Pacotes no venv do Kiro Crew: **`tools/install.py`** idempotente, com `--dry-run`, como fonte única das dependências (ver "Instalação")
+- [ ] Deve ser restaurada após update do Crew? Vincular no `tools/linked-skills.txt` do crew-setup
 - [ ] Dados do usuário em `.data/` (nunca commitados)
 - [ ] `tools/config.py` se houver preferências configuráveis
 - [ ] README atualizado com seção **Requisitos** e tabela de `check.py`

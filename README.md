@@ -10,6 +10,7 @@ Ativada automaticamente com `$create-skill` ou ao mencionar criação de skills.
 - Sugere convenção de repositório versionado (Git, qualquer plataforma)
 - Convenções de script: Python 3.10+, sem dependências externas
 - Template de `check.py` para validação de requisitos (exit 0/1)
+- Convenção de `tools/install.py` para skills com pacotes no venv do Kiro Crew, e vínculo com a skill [crew-setup](https://github.com/eliasrosa/kirocrew-setup-skill) para restaurar tudo após um update
 - Ciclo RED-GREEN-REFACTOR para testar e validar skills de disciplina
 
 ## Uso
